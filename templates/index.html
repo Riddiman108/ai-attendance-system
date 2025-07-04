@@ -1,0 +1,465 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Registration</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      .progress-bar {
+        width: 100%;
+        height: 30px;
+        background-color: #f0f0f0;
+        border-radius: 15px;
+        overflow: hidden;
+        margin: 10px 0;
+      }
+      
+      .progress-fill {
+        height: 100%;
+        background-color: #4ade80;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        transition: width 0.3s ease;
+      }
+      
+      #save-btn:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="centered-container">
+      <div class="glass-card">
+        <div class="header">
+          <div class="logo">
+            <i class="fas fa-graduation-cap"></i>
+            <h1>Academic Portal</h1>
+          </div>
+          <h2>Student Registration</h2>
+          <p>Complete your registration with facial verification</p>
+
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %}
+          <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+          {% endif %} {% endwith %}
+        </div>
+
+        <div class="content">
+          <div class="form-container">
+            <form
+              id="registrationForm"
+              onsubmit="submitRegistrationForm(event)"
+            >
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="name">
+                    <i class="fas fa-user"></i> Full Name
+                  </label>
+                  <input type="text" id="name" name="name" required />
+                </div>
+
+                <div class="form-group">
+                  <label> <i class="fas fa-venus-mars"></i> Gender </label>
+                  <div class="radio-group">
+                    <label class="radio-option">
+                      <input type="radio" name="gender" value="MALE" required />
+                      <span>Male</span>
+                    </label>
+                    <label class="radio-option">
+                      <input type="radio" name="gender" value="FEMALE" />
+                      <span>Female</span>
+                    </label>
+                    <label class="radio-option">
+                      <input type="radio" name="gender" value="OTHER" />
+                      <span>Other</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="email">
+                    <i class="fas fa-envelope"></i> Email
+                  </label>
+                  <input type="email" id="email" name="email" required />
+                  <small class="error-message" id="email-error"></small>
+                </div>
+
+                <div class="form-group">
+                  <label for="enrollment_no">
+                    <i class="fas fa-id-card"></i> Enrollment Number
+                  </label>
+                  <input
+                    type="text"
+                    id="enrollment_no"
+                    name="enrollment_no"
+                    required
+                    pattern="\d{2}[A-Z]{4,5}\d{3}"
+                    title="Format: 24UCOMP033 (2 digits, 4-5 uppercase letters, 3 digits)"
+                  />
+                  <small class="error-message" id="enrollment-error"></small>
+                </div>
+
+                <div class="form-group">
+                  <label for="contact">
+                    <i class="fas fa-phone"></i> Contact Number
+                  </label>
+                  <input
+                    type="tel"
+                    id="contact"
+                    name="contact"
+                    required
+                    pattern="\d{10}"
+                    title="10 digit mobile number"
+                  />
+                  <small class="error-message" id="contact-error"></small>
+                </div>
+
+                <div class="form-group">
+                  <label for="course">
+                    <i class="fas fa-book"></i> Course
+                  </label>
+                  <select id="course" name="course" required>
+                    <option value="">Select course</option>
+                    <option value="COMPUTER SCIENCE">Computer Science</option>
+                    <option value="ELECTRICAL ENGINEERING">
+                      Electrical Engineering
+                    </option>
+                    <option value="MECHANICAL ENGINEERING">
+                      Mechanical Engineering
+                    </option>
+                    <option value="BUSINESS ADMINISTRATION">
+                      Business Administration
+                    </option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="department">
+                    <i class="fas fa-building"></i> Department
+                  </label>
+                  <input
+                    type="text"
+                    id="department"
+                    name="department"
+                    required
+                  />
+                </div>
+
+                <div class="form-group full-width">
+                  <label for="address">
+                    <i class="fas fa-home"></i> Address
+                  </label>
+                  <textarea
+                    id="address"
+                    name="address"
+                    rows="3"
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="state">
+                    <i class="fas fa-map-marker-alt"></i> State
+                  </label>
+                  <input type="text" id="state" name="state" required />
+                </div>
+
+                <div class="form-group">
+                  <label for="country">
+                    <i class="fas fa-globe"></i> Country
+                  </label>
+                  <input type="text" id="country" name="country" required />
+                </div>
+              </div>
+
+              <input type="hidden" id="image_data" name="image_data" />
+
+              <div id="progress-container" style="display: none; margin: 20px 0">
+                <h4>Extracting Face Data...</h4>
+                <div class="progress-bar">
+                  <div id="extraction-progress" class="progress-fill" style="width: 0%">
+                    0%
+                  </div>
+                </div>
+              </div>
+
+              <div class="button-group">
+                <button type="submit" class="btn-primary" id="save-btn">
+                  <i class="fas fa-user-plus"></i> Register
+                </button>
+                <button type="reset" class="btn-secondary">
+                  <i class="fas fa-redo"></i> Clear
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="camera-container">
+            <div class="camera-header">
+              <h3><i class="fas fa-camera"></i> Face Recognition</h3>
+              <p>Position your face within the oval</p>
+            </div>
+
+            <div class="camera-box">
+              <div class="face-frame">
+                <div class="face-guide"></div>
+                <video id="video" autoplay playsinline></video>
+                <div class="detection-status">
+                  <div class="status-dot"></div>
+                  <div class="status-text">Position your face in the oval</div>
+                </div>
+                <div class="processing-overlay">
+                  <div class="spinner"></div>
+                  <div class="status-message">Extracting face features...</div>
+                </div>
+              </div>
+              <button id="capture-btn" class="btn-capture" type="button">
+                <i class="fas fa-camera"></i> Capture Photo
+              </button>
+            </div>
+
+            <div class="preview-container">
+              <div class="preview-frame">
+                <img id="preview" alt="Captured preview" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="canvas" style="display: none"></canvas>
+
+    <script>
+      const video = document.getElementById("video");
+      const captureBtn = document.getElementById("capture-btn");
+      const canvas = document.getElementById("canvas");
+      const preview = document.getElementById("preview");
+      const imageDataInput = document.getElementById("image_data");
+      const statusDot = document.querySelector(".status-dot");
+      const statusText = document.querySelector(".status-text");
+
+      const emailInput = document.getElementById("email");
+      const enrollmentInput = document.getElementById("enrollment_no");
+      const contactInput = document.getElementById("contact");
+      const emailError = document.getElementById("email-error");
+      const enrollmentError = document.getElementById("enrollment-error");
+      const contactError = document.getElementById("contact-error");
+
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      const mobileRegex = /^\d{10}$/;
+      const enrollmentRegex = /^\d{2}[A-Z]{4,5}\d{3}$/;
+
+      emailInput.addEventListener("input", () => {
+        if (!emailRegex.test(emailInput.value)) {
+          emailError.textContent = "Invalid email format";
+        } else {
+          emailError.textContent = "";
+        }
+      });
+
+      enrollmentInput.addEventListener("input", () => {
+        if (!enrollmentRegex.test(enrollmentInput.value)) {
+          enrollmentError.textContent =
+            "Format: 24UCOMP033 (2 digits, 4-5 uppercase letters, 3 digits)";
+        } else {
+          enrollmentError.textContent = "";
+        }
+      });
+
+      contactInput.addEventListener("input", () => {
+        if (!mobileRegex.test(contactInput.value)) {
+          contactError.textContent = "Must be 10 digits";
+        } else {
+          contactError.textContent = "";
+        }
+      });
+
+      function validateForm() {
+        let isValid = true;
+
+        if (!emailRegex.test(emailInput.value)) {
+          emailError.textContent = "Invalid email format";
+          isValid = false;
+        }
+
+        if (!enrollmentRegex.test(enrollmentInput.value)) {
+          enrollmentError.textContent = "Invalid enrollment number format";
+          isValid = false;
+        }
+
+        if (!mobileRegex.test(contactInput.value)) {
+          contactError.textContent = "Mobile number must be 10 digits";
+          isValid = false;
+        }
+
+        return isValid;
+      }
+
+      async function setupCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+            },
+          });
+
+          video.srcObject = stream;
+          video.onloadedmetadata = () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+          };
+        } catch (err) {
+          console.error("Camera error:", err);
+          alert("Could not access camera. Please enable permissions.");
+        }
+      }
+
+      captureBtn.addEventListener("click", () => {
+        const context = canvas.getContext("2d");
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        context.globalCompositeOperation = "destination-in";
+        context.beginPath();
+        context.ellipse(
+          canvas.width / 2,
+          canvas.height / 2,
+          canvas.width * 0.3,
+          canvas.height * 0.4,
+          0,
+          0,
+          2 * Math.PI
+        );
+        context.fill();
+
+        const dataUrl = canvas.toDataURL("image/png");
+        preview.src = dataUrl;
+        preview.style.display = "block";
+        imageDataInput.value = dataUrl;
+
+        statusDot.style.backgroundColor = "#10b981";
+        statusText.textContent = "Face captured!";
+        captureBtn.innerHTML = '<i class="fas fa-check"></i> Captured!';
+
+        setTimeout(() => {
+          statusDot.style.backgroundColor = "#f59e0b";
+          statusText.textContent = "Ready for another capture";
+          captureBtn.innerHTML = '<i class="fas fa-camera"></i> Capture Photo';
+        }, 2000);
+      });
+
+      async function submitRegistrationForm(event) {
+        event.preventDefault();
+        
+        if (!validateForm()) return;
+        
+        const imageData = document.getElementById('image_data').value;
+        if (!imageData) {
+          alert('Please capture your face first');
+          return;
+        }
+        
+        document.getElementById('progress-container').style.display = 'block';
+        document.getElementById('save-btn').disabled = true;
+        
+        const extractionResponse = await fetch('/extract_face', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ image_data: imageData })
+        });
+        
+        const extractionData = await extractionResponse.json();
+        
+        if (extractionData.status !== 'processing') {
+          alert('Face extraction failed: ' + (extractionData.message || 'Unknown error'));
+          document.getElementById('progress-container').style.display = 'none';
+          document.getElementById('save-btn').disabled = false;
+          return;
+        }
+        
+        const sessionId = extractionData.session_id;
+        
+        const progressInterval = setInterval(async () => {
+          const progressResponse = await fetch(`/progress/${sessionId}`);
+          const progressData = await progressResponse.json();
+          
+          document.getElementById('extraction-progress').style.width = `${progressData.progress}%`;
+          document.getElementById('extraction-progress').textContent = `${progressData.progress}%`;
+          
+          if (progressData.status === 'completed') {
+            clearInterval(progressInterval);
+            submitStudentData(sessionId);
+          } else if (progressData.status === 'failed' || progressData.status === 'error') {
+            clearInterval(progressInterval);
+            alert('Face extraction failed: ' + (progressData.message || 'No face detected'));
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('save-btn').disabled = false;
+          }
+        }, 500);
+      }
+
+      async function submitStudentData(sessionId) {
+        const form = document.getElementById('registrationForm');
+        const formData = {
+          session_id: sessionId,
+          name: form.name.value,
+          gender: form.querySelector('input[name="gender"]:checked').value,
+          email: form.email.value,
+          enrollment_no: form.enrollment_no.value,
+          contact: form.contact.value,
+          course: form.course.value,
+          department: form.department.value,
+          address: form.address.value,
+          state: form.state.value,
+          country: form.country.value
+        };
+        
+        try {
+          const response = await fetch('/save_student', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
+          
+          const result = await response.json();
+          if (result.status === 'success') {
+            window.location.href = '/success/' + result.student_id;
+          } else {
+            alert('Error saving student: ' + result.message);
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('save-btn').disabled = false;
+          }
+        } catch (error) {
+          alert('Error submitting form: ' + error.message);
+          document.getElementById('progress-container').style.display = 'none';
+          document.getElementById('save-btn').disabled = false;
+        }
+      }
+
+      window.addEventListener('DOMContentLoaded', setupCamera);
+    </script>
+  </body>
+</html>

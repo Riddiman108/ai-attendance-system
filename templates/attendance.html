@@ -1,0 +1,580 @@
+<!-- templates/attendance.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .attendance-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .camera-section {
+            display: flex;
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .camera-box {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 20px;
+        }
+        
+        .results-box {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: left;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .face-frame {
+            position: relative;
+            width: 100%;
+            padding-top: 75%; /* 4:3 Aspect Ratio */
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .detection-box {
+            position: absolute;
+            border: 3px solid #10b981;
+            border-radius: 5px;
+            background: rgba(16, 185, 129, 0.2);
+        }
+        
+        .detection-label {
+            position: absolute;
+            background: #10b981;
+            color: white;
+            padding: 2px 5px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 3px;
+            transform: translateY(-100%);
+        }
+        
+        .detected-face {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .student-info {
+            margin-top: 20px;
+        }
+        
+        .student-name {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .enrollment-no {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: 600;
+        }
+        
+        .attendance-time {
+            margin-top: 20px;
+            color: #94a3b8;
+        }
+        
+        .similarity {
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        
+        .high-similarity {
+            color: #10b981;
+        }
+        
+        .medium-similarity {
+            color: #f59e0b;
+        }
+        
+        .low-similarity {
+            color: #ef4444;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .alert-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 40px;
+            background: linear-gradient(45deg, #6366f1, #4f46e5);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
+            margin-top: 20px;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.5);
+            background: linear-gradient(45deg, #4f46e5, #4338ca);
+        }
+        
+        .attendance-log {
+            margin-top: 30px;
+        }
+        
+        .log-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .log-photo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .log-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .log-details {
+            flex: 1;
+        }
+        
+        .log-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .log-enrollment {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        
+        .log-time {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        
+        .log-similarity {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .high-similarity {
+            color: #10b981;
+        }
+        
+        .toggle-realtime {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #4ade80;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="glass-card">
+            <div class="attendance-container">
+                <h1><i class="fas fa-calendar-check"></i> Attendance System</h1>
+                <p>Mark attendance using real-time facial recognition</p>
+                
+                <div class="camera-section">
+                    <div class="camera-box">
+                        <div class="toggle-realtime">
+                            <span>Real-time Detection:</span>
+                            <label class="switch">
+                                <input type="checkbox" id="realtime-toggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="face-frame">
+                            <video id="video" autoplay playsinline></video>
+                            <canvas id="canvas"></canvas>
+                        </div>
+                        <button id="manual-capture-btn" class="btn-primary" style="display: none;">
+                            <i class="fas fa-camera"></i> Capture & Recognize
+                        </button>
+                    </div>
+                    
+                    <div class="results-box">
+                        <h3><i class="fas fa-user-check"></i> Recognition Results</h3>
+                        <div id="results-container">
+                            <p>Detected faces will appear here</p>
+                        </div>
+                        
+                        <div class="attendance-log" id="attendance-log">
+                            <h4><i class="fas fa-history"></i> Today's Attendance Log</h4>
+                            <div id="log-items"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="/dashboard" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const manualCaptureBtn = document.getElementById('manual-capture-btn');
+        const resultsContainer = document.getElementById('results-container');
+        const logItemsContainer = document.getElementById('log-items');
+        const realtimeToggle = document.getElementById('realtime-toggle');
+        
+        // State variables
+        let isProcessing = false;
+        let detectionInterval;
+        let lastProcessedTime = 0;
+        let attendanceLog = [];
+        
+        // Initialize camera
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    startFaceDetection();
+                };
+            } catch (err) {
+                console.error('Camera error:', err);
+                alert('Could not access camera. Please enable permissions.');
+            }
+        }
+        
+        // Start face detection
+        function startFaceDetection() {
+            if (detectionInterval) clearInterval(detectionInterval);
+            
+            const context = canvas.getContext('2d');
+            
+            detectionInterval = setInterval(async () => {
+                if (!realtimeToggle.checked || isProcessing) return;
+                
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Throttle processing to once per second
+                const now = Date.now();
+                if (now - lastProcessedTime < 1000) return;
+                lastProcessedTime = now;
+                
+                await processFrame();
+            }, 100);
+        }
+        
+        // Process video frame for face detection
+        async function processFrame() {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+            
+            try {
+                isProcessing = true;
+                
+                const response = await fetch('/attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        image_data: imageData,
+                        realtime: realtimeToggle.checked
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    displayDetectionResult(result, imageData);
+                    addToAttendanceLog(result);
+                } else if (result.status === 'error' && !realtimeToggle.checked) {
+                    resultsContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> ${result.message}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                if (!realtimeToggle.checked) {
+                    resultsContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> Error processing request
+                        </div>
+                    `;
+                }
+            } finally {
+                isProcessing = false;
+            }
+        }
+        
+        // Display detection result
+        function displayDetectionResult(result, imageData) {
+            // Clear previous results if not in real-time mode
+            if (!realtimeToggle.checked) {
+                resultsContainer.innerHTML = '';
+            }
+            
+            // Create result element
+            const resultElement = document.createElement('div');
+            resultElement.innerHTML = `
+                <img src="${imageData}" class="detected-face" alt="Detected Face">
+                <div class="student-info">
+                    <h4 class="student-name">${result.student.name}</h4>
+                    <div class="enrollment-no">${result.student.enrollment_no}</div>
+                    <div class="attendance-time">
+                        <i class="fas fa-clock"></i> ${new Date().toLocaleString()}
+                    </div>
+                    <div class="similarity ${getSimilarityClass(result.similarity)}">
+                        Similarity: ${(result.similarity * 100).toFixed(1)}%
+                    </div>
+                </div>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Attendance recorded successfully!
+                </div>
+            `;
+            
+            if (realtimeToggle.checked) {
+                // For real-time mode, prepend the new result
+                resultsContainer.insertBefore(resultElement, resultsContainer.firstChild);
+            } else {
+                // For manual mode, replace the content
+                resultsContainer.innerHTML = '';
+                resultsContainer.appendChild(resultElement);
+            }
+        }
+        
+        // Add to attendance log
+        function addToAttendanceLog(result) {
+            // Check if this student is already in today's log
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            
+            const existingIndex = attendanceLog.findIndex(item => 
+                item.student.enrollment_no === result.student.enrollment_no && 
+                item.timestamp.startsWith(today)
+            );
+            
+            if (existingIndex >= 0) {
+                // Update existing entry
+                attendanceLog[existingIndex] = {
+                    ...result,
+                    timestamp: now.toISOString()
+                };
+            } else {
+                // Add new entry
+                attendanceLog.unshift({
+                    ...result,
+                    timestamp: now.toISOString()
+                });
+            }
+            
+            // Keep only the latest 20 entries
+            if (attendanceLog.length > 20) {
+                attendanceLog = attendanceLog.slice(0, 20);
+            }
+            
+            updateAttendanceLogDisplay();
+        }
+        
+        // Update the attendance log display
+        function updateAttendanceLogDisplay() {
+            logItemsContainer.innerHTML = '';
+            
+            if (attendanceLog.length === 0) {
+                logItemsContainer.innerHTML = '<p>No attendance records yet</p>';
+                return;
+            }
+            
+            attendanceLog.forEach(item => {
+                const logItem = document.createElement('div');
+                logItem.className = 'log-item';
+                
+                logItem.innerHTML = `
+                    <div class="log-photo">
+                        <i class="fas fa-user" style="font-size: 2rem; color: #64748b; line-height: 60px;"></i>
+                    </div>
+                    <div class="log-details">
+                        <div class="log-name">${item.student.name}</div>
+                        <div class="log-enrollment">${item.student.enrollment_no}</div>
+                        <div class="log-time">${new Date(item.timestamp).toLocaleString()}</div>
+                    </div>
+                    <div class="log-similarity ${getSimilarityClass(item.similarity)}">
+                        ${(item.similarity * 100).toFixed(0)}%
+                    </div>
+                `;
+                
+                logItemsContainer.appendChild(logItem);
+            });
+        }
+        
+        // Get similarity class for styling
+        function getSimilarityClass(similarity) {
+            if (similarity > 0.7) return 'high-similarity';
+            if (similarity > 0.5) return 'medium-similarity';
+            return 'low-similarity';
+        }
+        
+        // Toggle real-time detection
+        realtimeToggle.addEventListener('change', function() {
+            manualCaptureBtn.style.display = this.checked ? 'none' : 'inline-flex';
+            startFaceDetection();
+            
+            if (!this.checked) {
+                resultsContainer.innerHTML = '<p>Click "Capture & Recognize" to take attendance</p>';
+            }
+        });
+        
+        // Manual capture button
+        manualCaptureBtn.addEventListener('click', processFrame);
+        
+        // Load today's attendance log
+        async function loadAttendanceLog() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const response = await fetch(`/api/attendance?date=${today}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    attendanceLog = data.attendance.map(item => ({
+                        student: {
+                            name: item.student_name,
+                            enrollment_no: item.enrollment_no
+                        },
+                        similarity: item.similarity || 0.8, // Default similarity if not stored
+                        timestamp: item.timestamp
+                    }));
+                    
+                    updateAttendanceLogDisplay();
+                }
+            } catch (error) {
+                console.error('Error loading attendance log:', error);
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            setupCamera();
+            loadAttendanceLog();
+        });
+    </script>
+</body>
+</html>
